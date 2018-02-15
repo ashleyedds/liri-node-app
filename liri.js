@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+
+//Set requirements
 const twitter = require('twitter');
 const Spotify = require('node-spotify-api');
 const request = require('request');
@@ -8,7 +10,15 @@ const fs = require('fs');
 
 var keys = require('./keys.js');
 
+//Grab command line inputs
 var liriCommand = process.argv[2];
+
+var searchTerm = "";
+
+//Grab everything from index[3] on as part of the search string
+for (var i = 3; i < process.argv.length; i++) {
+    searchTerm += process.argv[i] + " ";
+};
 
 //Twitter calls
 function getTweets() {
@@ -41,15 +51,10 @@ function getTweets() {
 };
 
 //Spotify calls
-function spotifySong() {
+function spotifySong(searchTerm) {
 
     var spotify = new Spotify(keys.spotify);
 
-    var searchTerm = "";
-
-    for (var i = 3; i < process.argv.length; i++) {
-            searchTerm += process.argv[i] + "";
-        }
 
     if (searchTerm === "") {
         searchTerm = "The Sign Ace of Base";
@@ -71,60 +76,79 @@ function spotifySong() {
                 'Album: ' + songSearched.album.name + '\n' +
                 'Preview: ' + songSearched.preview_url + '\n';
 
-                console.log(printSongInfo);
+            console.log(printSongInfo);
         }
     });
 };
 
 //OMDB calls
-function getMovie() {
-    var searchTerm = "";
+function getMovie(searchTerm) {
 
-    for (var i = 3; i < process.argv.length; i++) {
-            searchTerm = "";
-            searchTerm += process.argv[i] + "";
-        }
-
-        if (searchTerm === "") {
-            searchTerm = "Mr. Nobody";
-        };
+    if (searchTerm === "") {
+        searchTerm = "Mr. Nobody";
+    };
 
     searchTerm = searchTerm.split(' ').join('+');
 
     var queryURL = "http://omdbapi.com/?t=" + searchTerm + "&plot=full&tomatoes=true&apikey=88b9de6e";
 
-    request(queryURL, function(error, data, body) {
-        if(error) {
+    request(queryURL, function (error, data, body) {
+        if (error) {
             var errMessage = "Dagnabit. That didn't work. Sorry Charlie." + error;
             console.log(errMessage)
             return;
-        } else {
+        } else if (JSON.parse(body).Title === undefined){
+            console.log("Hmmm...I don't see that movie. Try again.");
+            return;
+        } 
+        else {
             printMovieInfo = '--------------------\n' +
-            'Movie Information:\n' +
-            '--------------------\n\n' +
-            'Movie Title: ' + JSON.parse(body).Title + '\n' +
-            'Year Released: ' + JSON.parse(body).Released + '\n' +
-            'Rotton Tomatoes Rating: ' + JSON.parse(body).tomatoRating + '\n' +
-            'IMDB Rating: ' + JSON.parse(body).imdbRating + '\n' +
-            'Produced In: ' + JSON.parse(body).Country + '\n' +
-            'Actors: ' + JSON.parse(body).Actors + '\n' +
-            'Language: ' + JSON.parse(body).Language + '\n' +
-            'Plot: ' + JSON.parse(body).Plot + '\n'; 
-            
+                'Movie Information:\n' +
+                '--------------------\n\n' +
+                'Movie Title: ' + JSON.parse(body).Title + '\n' +
+                'Year Released: ' + JSON.parse(body).Released + '\n' +
+                'Rotton Tomatoes Rating: ' + JSON.parse(body).tomatoRating + '\n' +
+                'IMDB Rating: ' + JSON.parse(body).imdbRating + '\n' +
+                'Produced In: ' + JSON.parse(body).Country + '\n' +
+                'Actors: ' + JSON.parse(body).Actors + '\n' +
+                'Language: ' + JSON.parse(body).Language + '\n' +
+                'Plot: ' + JSON.parse(body).Plot + '\n';
+
             console.log(printMovieInfo);
         }
     });
 };
 
+//Read text file and excute function
+function doIt() {
+    fs.readFile('./random.txt', 'utf8', function (error, data) {
+        if (error) {
+            var errMessage = "Sorry. This genie don't take no commands" + error;
+            return;
+        } else {
+            var dataArr = data.split(",");
+            console.log(dataArr[1]);
+
+            spotifySong(dataArr[1]);
+        }
+
+    })
+};
+
+
 //Command line commands
 if (liriCommand === "my-tweets") {
     getTweets();
-}
-
-if (liriCommand === "spotify-this-song") {
-    spotifySong();
-}
-
-if (liriCommand === "movie-this") {
-    getMovie();
-}
+} else if (liriCommand === "spotify-this-song") {
+    spotifySong(searchTerm);
+} else if (liriCommand === "movie-this") {
+    getMovie(searchTerm);
+} else if (liriCommand === "do-what-it-says") {
+    doIt();
+} else {
+    console.log("Please enter one of these options:\n" +
+        "my-tweets\n" +
+        "spotify-this-song\n" +
+        "movie-this\n" +
+        "do-what-it-says");
+};
